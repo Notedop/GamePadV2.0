@@ -84,19 +84,14 @@ void loop() {
 
   //read pins and assign to temp buffer whenever it does not equal to the sendbuffer. Also set updatesAvailable to TRUE if a change was detected.
   for (int i = 0; i < REPORTSIZE; i++){
-    tempBuffer[i] = readPinsToByte(i);
-    if (tempBuffer[i] != sendBuffer[i]) {
-      sendBuffer[i] = tempBuffer[i];
+    sendBuffer[i] = readPinsToByte(i);
+    if (UsbGamePad.reportBuffer[i] != sendBuffer[i]) {
+      UsbGamePad.reportBuffer[i] = tempBuffer[i];
       updatesAvailable = true;
     }
   }
     
   if (updatesAvailable) {
-
-    //assign the send buffer to the report buffer.
-    for (int i = 0; i < REPORTSIZE; i++) {
-      UsbGamePad.reportBuffer[i] = sendBuffer[i];
-    }
 
     //whenever ready, send the stuff to the host and set the updatesAvailable to FALSE
     if (usbInterruptIsReady()) {
@@ -112,6 +107,12 @@ byte readPinsToByte(int bufferNumber) {
   //you can define here how the report data is sourced. 
   
   byte result = 0x00;
+
+  #if BYPASS_TIMER_ISR
+    delayMs(1);
+  #else
+    delay(1);
+  #endif
 
   switch (bufferNumber) {
 
