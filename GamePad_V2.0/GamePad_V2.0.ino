@@ -79,7 +79,7 @@ void loop() {
   #else
     delay(20);
   #endif
-  
+    
   updatesAvailable = false;
 
   //read pins and assign to temp buffer whenever it does not equal to the sendbuffer. Also set updatesAvailable to TRUE if a change was detected.
