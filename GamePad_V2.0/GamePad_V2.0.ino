@@ -11,12 +11,14 @@
 #if ENABLE_POWERSAVING
   #define SECONDSTILLSLEEP 10
   #define WAKEPIN 2
+  unsigned long previousMillis = 0;
 #endif
 
 //general constants
 #define REPORTSIZE 3
+#define DEBOUNCE_TIME 50
 
-unsigned long previousMillis = 0;
+unsigned long lastDebounceTime = 0 ;
 
 byte tempBuffer[REPORTSIZE];
 byte sendBuffer[REPORTSIZE];
@@ -71,32 +73,43 @@ void setup() {
   
 void loop() {
  
-  UsbGamePad.update();  
+  UsbGamePad.update();
   
   //keep as 50 or less
   #if BYPASS_TIMER_ISR
-    delayMs(20);
+    delayMs(10);
   #else
-    delay(20);
+    delay(10);
   #endif
     
   updatesAvailable = false;
 
-  //read pins and assign to temp buffer whenever it does not equal to the sendbuffer. Also set updatesAvailable to TRUE if a change was detected.
-  for (int i = 0; i < REPORTSIZE; i++){
-    sendBuffer[i] = readPinsToByte(i);
-    if (UsbGamePad.reportBuffer[i] != sendBuffer[i]) {
-      UsbGamePad.reportBuffer[i] = tempBuffer[i];
+  //read pins and assign to temp buffer whenever it does not equal to the reportbuffer. Also set updatesAvailable to TRUE if a change was detected.
+   for (int i = 0; i < REPORTSIZE; i++){
+    tempBuffer[i] = readPinsToByte(i);
+    if (tempBuffer[i] != sendBuffer[i] && ((millis() - lastDebounceTime) > DEBOUNCE_TIME )) {
+      sendBuffer[i] = tempBuffer[i];
       updatesAvailable = true;
+      lastDebounceTime = millis();
+      //Serial.println(lastDebounceTime);
     }
   }
-    
+
+
   if (updatesAvailable) {
+
+
+    //assign the send buffer to the report buffer.
+    for (int i = 0; i < REPORTSIZE; i++) {
+      UsbGamePad.reportBuffer[i] = sendBuffer[i];
+    }
 
     //whenever ready, send the stuff to the host and set the updatesAvailable to FALSE
     if (usbInterruptIsReady()) {
       usbSetInterrupt(UsbGamePad.reportBuffer, sizeof( UsbGamePad.reportBuffer));
       updatesAvailable = false;
+
+
     }
   }
 }
@@ -107,12 +120,6 @@ byte readPinsToByte(int bufferNumber) {
   //you can define here how the report data is sourced. 
   
   byte result = 0x00;
-
-  #if BYPASS_TIMER_ISR
-    delayMs(1);
-  #else
-    delay(1);
-  #endif
 
   switch (bufferNumber) {
 
